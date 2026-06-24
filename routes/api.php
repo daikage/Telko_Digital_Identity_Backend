@@ -9,6 +9,9 @@ use App\Http\Controllers\ProfileController;
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 
+Route::post('/auth/forgot-password', [\App\Http\Controllers\PasswordResetController::class, 'forgotPassword']);
+Route::post('/auth/reset-password', [\App\Http\Controllers\PasswordResetController::class, 'resetPassword']);
+
 // Public profile route
 Route::get('/profile/{username}', [ProfileController::class, 'show']);
 
