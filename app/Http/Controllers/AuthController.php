@@ -14,15 +14,36 @@ class AuthController extends Controller
         $request->validate([
             'email' => 'required|email|unique:users',
             'username' => 'required|string|unique:users',
-            'password' => 'required|min:8',
+            'headline' => 'nullable|string|max:255',
+            'bio' => 'nullable|string',
+            'avatar_url' => 'nullable|string|url',
+            'skills' => 'nullable|array',
         ]);
 
-        $user = User::create([
-            'name' => $request->username, // Default name to username
-            'email' => $request->email,
-            'username' => $request->username,
-            'password' => Hash::make($request->password),
-        ]);
+        $password = \Illuminate\Support\Str::random(24);
+
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $user = User::create([
+                'name' => $request->username, // Default name to username
+                'email' => $request->email,
+                'username' => $request->username,
+                'password' => Hash::make($password),
+            ]);
+
+            \App\Models\Profile::create([
+                'user_id' => $user->id,
+                'headline' => $request->headline,
+                'bio' => $request->bio,
+                'avatar_url' => $request->avatar_url,
+                'skills' => $request->skills ?? [],
+            ]);
+
+            \Illuminate\Support\Facades\DB::commit();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            throw $e;
+        }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
