@@ -16,11 +16,25 @@ class AuthController extends Controller
             'username' => 'required|string|unique:users',
             'headline' => 'nullable|string|max:255',
             'bio' => 'nullable|string',
-            'avatar_url' => 'nullable|string|url',
+            'avatar_url' => 'nullable|string',
+            'avatar_base64' => 'nullable|string',
             'skills' => 'nullable|array',
         ]);
 
         $password = \Illuminate\Support\Str::random(24);
+        $avatarUrl = $request->avatar_url;
+
+        if ($request->filled('avatar_base64')) {
+            $base64 = $request->input('avatar_base64');
+            @list($type, $file_data) = explode(';', $base64);
+            @list(, $file_data)      = explode(',', $file_data);
+            if ($file_data) {
+                $image = base64_decode($file_data);
+                $imageName = 'avatars/' . \Illuminate\Support\Str::random(40) . '.png';
+                \Illuminate\Support\Facades\Storage::disk('public')->put($imageName, $image);
+                $avatarUrl = url('storage/' . $imageName);
+            }
+        }
 
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
@@ -35,7 +49,7 @@ class AuthController extends Controller
                 'user_id' => $user->id,
                 'headline' => $request->headline,
                 'bio' => $request->bio,
-                'avatar_url' => $request->avatar_url,
+                'avatar_url' => $avatarUrl,
                 'skills' => $request->skills ?? [],
             ]);
 
