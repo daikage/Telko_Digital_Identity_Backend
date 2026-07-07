@@ -21,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::get('/my-profile', [ProfileController::class, 'myProfile']);
     Route::put('/profile/update', [ProfileController::class, 'update']);
+    Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
     
     // Analytics
     Route::get('/analytics', [\App\Http\Controllers\AnalyticsController::class, 'index']);

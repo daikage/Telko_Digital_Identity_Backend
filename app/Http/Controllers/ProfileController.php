@@ -27,13 +27,19 @@ class ProfileController extends Controller
             ]);
         }
 
+        // Build avatar_url from avatar_data if no external URL is set
+        $profileData = $profile->toArray();
+        $profileData['avatar_url'] = $this->resolveAvatarUrl($profile);
+        // Don't send raw base64 blob to public consumers
+        unset($profileData['avatar_data']);
+
         return response()->json([
             'user' => [
                 'name' => $user->name,
                 'username' => $user->username,
                 'email' => $user->email,
             ],
-            'profile' => $profile,
+            'profile' => $profileData,
         ]);
     }
 
@@ -44,13 +50,85 @@ class ProfileController extends Controller
             ->with(['experiences', 'socialLinks'])
             ->first();
 
+        $profileData = $profile ? $profile->toArray() : null;
+        if ($profile) {
+            $profileData['avatar_url'] = $this->resolveAvatarUrl($profile);
+            // Don't send raw base64 blob
+            unset($profileData['avatar_data']);
+        }
+
         return response()->json([
             'user' => [
                 'name' => $user->name,
                 'username' => $user->username,
                 'email' => $user->email,
             ],
-            'profile' => $profile,
+            'profile' => $profileData,
+        ]);
+    }
+
+    /**
+     * Dedicated avatar upload endpoint.
+     * Accepts multipart/form-data with an 'avatar' file field.
+     * Compresses the image and stores it as base64 in the database.
+     */
+    public function uploadAvatar(Request $request)
+    {
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpg,jpeg,png,webp,gif|max:2048',
+        ]);
+
+        $user = $request->user();
+        $file = $request->file('avatar');
+
+        // Read and compress the image
+        $imageData = file_get_contents($file->getRealPath());
+        $image = @imagecreatefromstring($imageData);
+
+        if (!$image) {
+            return response()->json(['error' => 'Invalid image file'], 422);
+        }
+
+        // Resize to max 400x400 to keep DB size reasonable
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $maxDim = 400;
+
+        if ($width > $maxDim || $height > $maxDim) {
+            $ratio = min($maxDim / $width, $maxDim / $height);
+            $newWidth = (int) round($width * $ratio);
+            $newHeight = (int) round($height * $ratio);
+            $resized = imagecreatetruecolor($newWidth, $newHeight);
+
+            // Preserve transparency for PNG
+            imagealphablending($resized, false);
+            imagesavealpha($resized, true);
+
+            imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+            imagedestroy($image);
+            $image = $resized;
+        }
+
+        // Encode as JPEG for compression (quality 85)
+        ob_start();
+        imagejpeg($image, null, 85);
+        $compressedData = ob_get_clean();
+        imagedestroy($image);
+
+        $base64 = 'data:image/jpeg;base64,' . base64_encode($compressedData);
+
+        // Store in the database
+        $profile = Profile::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'avatar_data' => $base64,
+                'avatar_url' => null, // Clear any old external URL
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Avatar uploaded successfully',
+            'avatar_url' => $base64,
         ]);
     }
 
@@ -61,7 +139,6 @@ class ProfileController extends Controller
             'bio' => 'nullable|string',
             'linkedin' => 'nullable|string|max:255',
             'avatar_url' => 'nullable|string',
-            'avatar_base64' => 'nullable|string',
             'theme_color' => 'nullable|string',
             'contact_email' => 'nullable|email',
             'contact_phone' => 'nullable|string',
@@ -81,17 +158,10 @@ class ProfileController extends Controller
                 'contact_phone', 'skills', 'projects'
             ]);
 
-            if ($request->filled('avatar_base64')) {
-                $base64 = $request->input('avatar_base64');
-                @list($type, $file_data) = explode(';', $base64);
-                @list(, $file_data)      = explode(',', $file_data);
-                if ($file_data) {
-                    $image = base64_decode($file_data);
-                    $imageName = 'avatars/' . Str::random(40) . '.png';
-                    Storage::disk('public')->put($imageName, $image);
-                    $data['avatar_url'] = url('storage/' . $imageName);
-                }
-            }
+            // Don't overwrite avatar_data via the general update endpoint
+            // Avatar uploads are handled by the dedicated uploadAvatar endpoint
+            // Remove avatar_base64 if accidentally sent
+            unset($data['avatar_base64']);
 
             $profile = Profile::updateOrCreate(
                 ['user_id' => $user->id],
@@ -114,12 +184,31 @@ class ProfileController extends Controller
 
             DB::commit();
 
-            return response()->json(
-                $profile->load(['experiences', 'socialLinks'])
-            );
+            $result = $profile->load(['experiences', 'socialLinks'])->toArray();
+            $result['avatar_url'] = $this->resolveAvatarUrl($profile);
+            unset($result['avatar_data']);
+
+            return response()->json($result);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => 'Failed to update profile'], 500);
         }
+    }
+
+    /**
+     * Resolve the effective avatar URL for a profile.
+     * Prioritizes avatar_data (base64 stored in DB) over avatar_url (external link).
+     */
+    private function resolveAvatarUrl(Profile $profile): ?string
+    {
+        if (!empty($profile->avatar_data)) {
+            return $profile->avatar_data;
+        }
+
+        if (!empty($profile->avatar_url)) {
+            return $profile->avatar_url;
+        }
+
+        return null;
     }
 }
