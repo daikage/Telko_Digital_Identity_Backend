@@ -191,7 +191,10 @@ class ProfileController extends Controller
             return response()->json($result);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Failed to update profile'], 500);
+            return response()->json([
+                'message' => 'Failed to update profile',
+                'error' => app()->environment('production') ? null : $e->getMessage(),
+            ], 500);
         }
     }
 
