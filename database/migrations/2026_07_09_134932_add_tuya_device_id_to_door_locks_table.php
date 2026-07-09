@@ -14,9 +14,15 @@ return new class extends Migration
     {
         Schema::table('door_locks', function (Blueprint $table) {
             $table->string('tuya_device_id')->nullable()->after('nfc_aid');
-            // Modify the enum to include 'tuya'
-            DB::statement("ALTER TABLE door_locks MODIFY COLUMN lock_type ENUM('nfc', 'ble', 'both', 'tuya') DEFAULT 'both'");
         });
+        
+        $driver = DB::connection()->getDriverName();
+        if ($driver === 'pgsql') {
+            DB::statement("ALTER TABLE door_locks DROP CONSTRAINT IF EXISTS door_locks_lock_type_check");
+            DB::statement("ALTER TABLE door_locks ADD CONSTRAINT door_locks_lock_type_check CHECK (lock_type::text IN ('nfc', 'ble', 'both', 'tuya'))");
+        } elseif ($driver === 'mysql') {
+            DB::statement("ALTER TABLE door_locks MODIFY COLUMN lock_type ENUM('nfc', 'ble', 'both', 'tuya') DEFAULT 'both'");
+        }
     }
 
     /**
@@ -26,8 +32,14 @@ return new class extends Migration
     {
         Schema::table('door_locks', function (Blueprint $table) {
             $table->dropColumn('tuya_device_id');
-            // Revert enum
-            DB::statement("ALTER TABLE door_locks MODIFY COLUMN lock_type ENUM('nfc', 'ble', 'both') DEFAULT 'both'");
         });
+        
+        $driver = DB::connection()->getDriverName();
+        if ($driver === 'pgsql') {
+            DB::statement("ALTER TABLE door_locks DROP CONSTRAINT IF EXISTS door_locks_lock_type_check");
+            DB::statement("ALTER TABLE door_locks ADD CONSTRAINT door_locks_lock_type_check CHECK (lock_type::text IN ('nfc', 'ble', 'both'))");
+        } elseif ($driver === 'mysql') {
+            DB::statement("ALTER TABLE door_locks MODIFY COLUMN lock_type ENUM('nfc', 'ble', 'both') DEFAULT 'both'");
+        }
     }
 };
