@@ -81,4 +81,69 @@ class AccessCardController extends Controller
             'logs' => $logs,
         ]);
     }
+
+    /**
+     * Unlock a Tuya cloud-connected door lock.
+     */
+    public function tuyaUnlock(Request $request, $id, \App\Services\TuyaService $tuyaService)
+    {
+        $card = AccessCard::where('user_id', $request->user()->id)
+            ->where('id', $id)
+            ->with('doorLock')
+            ->firstOrFail();
+
+        if (!$card->isValid()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access card is expired, inactive, or outside allowed schedule.',
+            ], 403);
+        }
+
+        $lock = $card->doorLock;
+
+        if (!$lock || $lock->lock_type !== 'tuya' || empty($lock->tuya_device_id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This door lock does not support Cloud Unlock.',
+            ], 400);
+        }
+
+        try {
+            // Send command to Tuya Cloud
+            $tuyaService->remoteUnlock($lock->tuya_device_id);
+
+            // Log successful access
+            AccessLog::create([
+                'access_card_id' => $card->id,
+                'door_lock_id' => $lock->id,
+                'method' => 'cloud',
+                'status' => 'granted',
+                'verified_at' => \Carbon\Carbon::now(),
+                'ip_address' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Door unlocked successfully via Cloud.',
+            ]);
+
+        } catch (\Exception $e) {
+            // Log failed access due to cloud error
+            AccessLog::create([
+                'access_card_id' => $card->id,
+                'door_lock_id' => $lock->id,
+                'method' => 'cloud',
+                'status' => 'denied',
+                'verified_at' => \Carbon\Carbon::now(),
+                'ip_address' => $request->ip(),
+            ]);
+
+            \Illuminate\Support\Facades\Log::error('Tuya Unlock Failed', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Cloud Unlock failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

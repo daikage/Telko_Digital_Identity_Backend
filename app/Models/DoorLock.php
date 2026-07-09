@@ -10,6 +10,7 @@ class DoorLock extends Model
         'name',
         'location',
         'lock_type',
+        'tuya_device_id',
         'ble_service_uuid',
         'ble_characteristic_uuid',
         'nfc_aid',

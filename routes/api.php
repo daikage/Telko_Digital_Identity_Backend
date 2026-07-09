@@ -32,10 +32,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/analytics', [\App\Http\Controllers\AnalyticsController::class, 'index']);
 
     // Access Cards (user-facing)
-    Route::get('/access-cards', [AccessCardController::class, 'index']);
-    Route::get('/access-cards/logs', [AccessCardController::class, 'logs']);
-    Route::get('/access-cards/{id}', [AccessCardController::class, 'show']);
-    Route::post('/access-cards/{id}/toggle', [AccessCardController::class, 'toggleActivation']);
+    Route::prefix('access-cards')->group(function () {
+        Route::get('/', [AccessCardController::class, 'index']);
+        Route::get('/logs', [AccessCardController::class, 'logs']);
+        Route::get('/{id}', [AccessCardController::class, 'show']);
+        Route::post('/{id}/toggle', [AccessCardController::class, 'toggleActivation']);
+        Route::post('/{id}/tuya-unlock', [AccessCardController::class, 'tuyaUnlock']);
+    });
 
     // Admin routes
     Route::get('/admin/dashboard', [\App\Http\Controllers\AdminController::class, 'dashboard']);

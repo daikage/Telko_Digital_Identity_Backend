@@ -150,11 +150,19 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Lock Type *</label>
-                        <select name="lock_type" required class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all text-sm">
+                        <select name="lock_type" required class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all text-sm" onchange="document.getElementById('tuya_field').style.display = this.value === 'tuya' ? 'block' : 'none'">
                             <option value="both" {{ old('lock_type', $editLock->lock_type ?? '') == 'both' ? 'selected' : '' }}>NFC + BLE (Both)</option>
                             <option value="nfc" {{ old('lock_type', $editLock->lock_type ?? '') == 'nfc' ? 'selected' : '' }}>NFC Only</option>
                             <option value="ble" {{ old('lock_type', $editLock->lock_type ?? '') == 'ble' ? 'selected' : '' }}>BLE Only</option>
+                            <option value="tuya" {{ old('lock_type', $editLock->lock_type ?? '') == 'tuya' ? 'selected' : '' }}>Tuya Cloud</option>
                         </select>
+                    </div>
+
+                    <div id="tuya_field" style="display: {{ old('lock_type', $editLock->lock_type ?? '') == 'tuya' ? 'block' : 'none' }}">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tuya Device ID</label>
+                        <input name="tuya_device_id" type="text" placeholder="ebxxxxxxxxxxxxxxxxx"
+                               value="{{ old('tuya_device_id', $editLock->tuya_device_id ?? '') }}"
+                               class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all text-sm font-mono">
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -276,8 +284,8 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="px-2.5 py-1 rounded-full text-xs font-medium
-                                        {{ $lock->lock_type === 'both' ? 'bg-cyan-100 text-cyan-700' : ($lock->lock_type === 'nfc' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700') }}">
-                                        {{ $lock->lock_type === 'both' ? 'NFC + BLE' : strtoupper($lock->lock_type) }}
+                                        {{ $lock->lock_type === 'both' ? 'bg-cyan-100 text-cyan-700' : ($lock->lock_type === 'nfc' ? 'bg-purple-100 text-purple-700' : ($lock->lock_type === 'tuya' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700')) }}">
+                                        {{ $lock->lock_type === 'both' ? 'NFC + BLE' : ($lock->lock_type === 'tuya' ? 'Tuya Cloud' : strtoupper($lock->lock_type)) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 font-medium text-gray-900">{{ $lock->access_cards_count }}</td>
