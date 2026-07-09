@@ -23,6 +23,9 @@ return [
         'https://telkodigitalidentityfrontend2.vercel.app',
         'http://localhost:5173',
         'http://localhost:3000',
+        'http://localhost',
+        'https://localhost',
+        'capacitor://localhost',
     ],
 
     'allowed_origins_patterns' => [

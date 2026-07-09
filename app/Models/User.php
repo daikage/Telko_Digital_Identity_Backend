@@ -36,4 +36,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(Profile::class);
     }
+
+    public function accessCards()
+    {
+        return $this->hasMany(AccessCard::class);
+    }
 }
