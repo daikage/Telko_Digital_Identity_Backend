@@ -47,4 +47,31 @@ class AdminController extends Controller
         $users = User::with('profile')->orderBy('created_at', 'desc')->get();
         return response()->json($users);
     }
+
+    public function updateRfid(Request $request, $id)
+    {
+        // Authorization check
+        if (!$request->user() || !$request->user()->is_admin) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'physical_rfid_uid' => 'nullable|string|max:255',
+        ]);
+
+        $user = User::findOrFail($id);
+        
+        // Ensure profile exists
+        if (!$user->profile) {
+            $user->profile()->create([
+                'physical_rfid_uid' => $request->physical_rfid_uid
+            ]);
+        } else {
+            $user->profile->update([
+                'physical_rfid_uid' => $request->physical_rfid_uid
+            ]);
+        }
+
+        return response()->json(['message' => 'RFID UID updated successfully.']);
+    }
 }

@@ -9,7 +9,7 @@ class Profile extends Model
     protected $fillable = [
         'user_id', 'headline', 'bio', 'linkedin', 
         'avatar_url', 'avatar_data', 'theme_color', 'contact_email', 'contact_phone',
-        'skills', 'projects'
+        'skills', 'projects', 'physical_rfid_uid'
     ];
 
     protected $casts = [

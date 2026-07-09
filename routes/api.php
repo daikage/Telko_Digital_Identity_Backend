@@ -43,6 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Admin routes
     Route::get('/admin/dashboard', [\App\Http\Controllers\AdminController::class, 'dashboard']);
     Route::get('/admin/users', [\App\Http\Controllers\AdminController::class, 'users']);
+    Route::put('/admin/users/{id}/rfid', [\App\Http\Controllers\AdminController::class, 'updateRfid']);
 
     // Admin — Door Locks & Access Cards
     Route::get('/admin/door-locks', [DoorLockController::class, 'index']);
