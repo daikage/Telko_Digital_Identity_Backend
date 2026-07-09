@@ -24,7 +24,8 @@
                         class="h-12 object-contain" />
                     <span class="font-bold text-xl text-gray-900">Admin Control Panel</span>
                 </div>
-                <div class="flex items-center">
+                <div class="flex items-center gap-4">
+                    <a href="{{ route('admin.doorlocks') }}" class="text-gray-600 hover:text-blue-600 font-medium text-sm transition-colors">🔐 Door Locks</a>
                     <form action="{{ route('logout') }}" method="POST">
                         @csrf
                         <button type="submit"
